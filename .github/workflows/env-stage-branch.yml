@@ -1,0 +1,28 @@
+name: STAGE Deploy DECA-MESSAGE-SERVER to Amazon ECR
+
+on:
+  push:
+    branches:
+      - stage
+
+jobs:
+  call-common-deploy-to-ecs:
+    uses: ./.github/workflows/common-deploy-to-ecs.yml
+    with:
+      ECS_CLUSTER: hackerthon
+      ECS_SERVICE: ethcon-seoul-2023
+      ACTIVE_PROFILES: stage
+      ecs_task_definition: .aws/stage-task-definition.json
+      SLACK_MESSAGE_START_BUILD: ':check:  The `development` sources have been distributed. The server will shut down in 2-3 minutes.'
+      SLACK_MESSAGE_START_DEPLOY: ':check: Service will be temporarily suspended due to deployment of the `development` server.'
+      SLACK_MESSAGE_DEPLOY_SUCCESS: ':check: Deployment of the ‘development’ server has been completed.'
+      SLACK_MESSAGE_DEPLOY_FAILURE: ':check: Deployment of the `development` server has `failed`. :x:'
+      SLACK_MESSAGE_DEPLOY_CANCELED: ':check: The deployment of the ‘development’ server has been ‘cancelled’. :x:'
+
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.TERA_REPO_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TERA_REPO_AWS_SECRET_ACCESS_KEY }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      AWS_TASK_ROLE_ARN: ${{ secrets.AWS_TASK_ROLE_ARN }}
+
+

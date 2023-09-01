@@ -1,0 +1,153 @@
+name: Deploy DECA-MESSAGE-SERVER to Amazon ECR
+
+on:
+  workflow_call:
+    inputs:
+      ACTIVE_PROFILES:
+        required: true
+        type: string
+      ecs_task_definition:
+        required: true
+        type: string
+      ECS_CLUSTER:
+        required: true
+        type: string
+      ECS_SERVICE:
+        required: true
+        type: string
+      SLACK_MESSAGE_START_BUILD:
+        required: true
+        type: string
+      SLACK_MESSAGE_START_DEPLOY:
+        required: true
+        type: string
+      SLACK_MESSAGE_DEPLOY_SUCCESS:
+        required: true
+        type: string
+      SLACK_MESSAGE_DEPLOY_FAILURE:
+        required: true
+        type: string
+      SLACK_MESSAGE_DEPLOY_CANCELED:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: true
+      AWS_TASK_ROLE_ARN:
+        required: true
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: ethcon-handlit-repo
+  CONTAINER_NAME: ethcon-handlit-container
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.ACTIVE_PROFILES }}
+
+    steps:
+      - name: Notify Slack
+        if: always() # this ensures the step always runs, even if previous steps fail
+        uses: 8398a7/action-slack@v3
+        with:
+          status: cancelled # 'success', 'failure', or 'cancelled'
+          fields: repo,message,author,ref # customize as desired repo,message,commit,author,action,eventName,ref,workflow,job,took # optional
+          text: ${{inputs.SLACK_MESSAGE_START_BUILD}}
+          color: warning # use 'danger' for red, 'good' for green, 'warning' for yellow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # set this secret in your repo settings
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install jq
+        run: sudo apt-get install jq
+
+      - name: Update task-definition.json with secrets
+        run: |
+          jq '.taskRoleArn = "${{ secrets.AWS_TASK_ROLE_ARN }}"' | .executionRoleArn = "${{ secrets.AWS_TASK_ROLE_ARN }}"' task-definition.json > stage-task-definition.json
+
+      - name: Use Node.js version 18
+        uses: actions/setup-node@v2
+        with:
+          node-version: 18
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ENVIRONMENT: ${{ inputs.ACTIVE_PROFILES }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build --build-arg ENVIRONMENT=${{ env.ENVIRONMENT }} -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >>$GITHUB_OUTPUT
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ inputs.ecs_task_definition }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Notify Slack
+        if: always() # this ensures the step always runs, even if previous steps fail
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure # 'success', 'failure', or 'cancelled'
+          fields: repo
+          text: ${{inputs.SLACK_MESSAGE_START_DEPLOY}}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # set this secret in your repo settings
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ inputs.ECS_SERVICE }}
+          cluster: ${{ inputs.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Set Slack message
+        id: slack_message
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "::set-output name=message::${{ inputs.SLACK_MESSAGE_DEPLOY_SUCCESS }}"
+          elif [ "${{ job.status }}" == "failure" ]; then
+            echo "::set-output name=message::${{ inputs.SLACK_MESSAGE_DEPLOY_FAILURE }}"
+          elif [ "${{ job.status }}" == "cancelled" ]; then
+            echo "::set-output name=message::${{ inputs.SLACK_MESSAGE_DEPLOY_CANCELED }}"
+          fi
+
+      - name: Notify Slack
+        if: always() # this ensures the step always runs, even if previous steps fail
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo # customize as desired
+          text: ${{ steps.slack_message.outputs.message }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # set this secret in your repo settings
