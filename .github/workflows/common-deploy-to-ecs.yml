@@ -73,8 +73,8 @@ jobs:
       - name: Update task-definition.json with secrets
         run: |
           pwd
-          ls
-          jq '.taskRoleArn = "${{ secrets.AWS_TASK_ROLE_ARN }}" | .executionRoleArn = "${{ secrets.AWS_TASK_ROLE_ARN }}"' ./aws/task-definition.json > ./aws/stage-task-definition.json
+          ls -al
+          jq '.taskRoleArn = "${{ secrets.AWS_TASK_ROLE_ARN }}" | .executionRoleArn = "${{ secrets.AWS_TASK_ROLE_ARN }}"' .aws/task-definition.json > .aws/stage-task-definition.json
 
       - name: Use Node.js version 18
         uses: actions/setup-node@v2
