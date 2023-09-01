@@ -10,7 +10,7 @@ jobs:
     uses: ./.github/workflows/common-deploy-to-ecs.yml
     with:
       ECS_CLUSTER: hackerthon
-      ECS_SERVICE: ethcon-seoul-2023
+      ECS_SERVICE: ethcon-2023-seoul
       ACTIVE_PROFILES: stage
       ecs_task_definition: .aws/stage-task-definition.json
       SLACK_MESSAGE_START_BUILD: ':check:  The `development` sources have been distributed. The server will shut down in 2-3 minutes.'
