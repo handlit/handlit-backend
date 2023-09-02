@@ -6,6 +6,8 @@ import path from "path";
 import * as fs from "fs";
 import MyUser from "../models/MyUser";
 import {createCard, getMyCard, getMyCardById, IMyCard} from "../models/MyCard";
+import {generateCardQR} from "../service/CardService";
+import {createTelegramClass} from "../module/Telegram";
 
 const router = Router();
 
@@ -97,6 +99,72 @@ router.get('/card', authToken, async (req: Request, res: Response) => {
     });
   } catch (e) {
     sendError(res, e)
+  }
+});
+
+
+/**
+ * #4020 카드 이미지
+ */
+router.get('/card/:cardId/image', async (req: Request, res: Response) => {
+  try {
+    const cardId = req.params.cardId;
+    const card =  await getMyCardById(cardId);
+    const base64Image = card.cardImageBase64.split(';base64,').pop();
+
+    if (!base64Image) {
+      throw new Error('No base64Image')
+    }
+    // base64 이미지를 Buffer로 변환
+    const imageBuffer = Buffer.from(base64Image, 'base64');
+
+    res.setHeader('Content-Disposition', 'attachment;filename="businessCard.png"');
+    res.setHeader('Content-Type', 'image/png');
+    res.send(imageBuffer);
+  } catch (e) {
+    sendError(res, e);
+  }
+});
+
+/**
+ * #4030 CARD QR 코드 조회
+ */
+router.get('/card/:cardId/qrcode', async (req: Request, res: Response) => {
+  try {
+    const cardId = req.params.cardId;
+    const bufferedImage = await generateCardQR(`${process.env.HOST_URL}/qrcode/${cardId}`);
+    // 응답 헤더 설정 및 PNG 이미지로 응답
+    res.writeHead(200, {
+      'Content-Type': 'image/png',
+      'Content-Length': bufferedImage.length
+    });
+    res.end(bufferedImage);
+  } catch (e) {
+    sendError(res, e);
+  }
+});
+
+/**
+ * #5000 사용자 QR 스캔 정보 조회
+ */
+router.post('/qr', authToken, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId as string
+    const qrData = req.body.qrData as string
+    const telegramId = qrData.split('/').pop() as string;
+
+    const telegram = createTelegramClass(userId)
+    const user = await telegram.getUserInfoByUsername(telegramId);
+    if(!user) {
+      throw new Error('user not found')
+    }
+    const photoList = await telegram.getUserPhoto(user.id, user.access_hash)
+    sendResponse(res, {
+      user,
+      photoList,
+    })
+  } catch (error) {
+    sendError(res, error );
   }
 });
 
