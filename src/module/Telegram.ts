@@ -174,11 +174,15 @@ class Telegram {
     }
 
     async uploadMediaByBase64(base64Image: string) {
-        const imageData = base64Image.split(';base64,').pop();
+        const imageData = base64Image;
         if (!imageData) throw new Error('image data not found');
 
         const imageBuffer = Buffer.from(imageData, 'base64');
         return await this.uploadMedia(imageBuffer);
+    }
+    async uploadMediaByFile(file: Express.Multer.File) {
+        const fileBuffer = file.buffer;
+        return await this.uploadMedia(fileBuffer, file.originalname);
     }
     async uploadMedia(fileBuffer: Buffer, fileName: string = 'image.png') {
         // 파일의 고유한 ID와 파트 번호 생성
