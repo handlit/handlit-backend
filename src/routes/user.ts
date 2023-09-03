@@ -122,12 +122,12 @@ router.post(
         loopCount++;
       }
 
-      // const ipfsProvider = new IpfsProvider();
-      // const contractConnector = new ContractConnector();
+      const ipfsProvider = new IpfsProvider();
+      const contractConnector = new ContractConnector();
 
-      // const imgUri = await ipfsProvider.uploadImg(cardImageBase64);
-      // const metaUri = await ipfsProvider.uploadSBTMetadata(name, imgUri);
-      // const isSuccess = await contractConnector.mintCard(userData!.walletAddress, metaUri);
+      const imgUri = await ipfsProvider.uploadImg(cardImageBase64);
+      const metaUri = await ipfsProvider.uploadSBTMetadata(name, imgUri);
+      const isSuccess = await contractConnector.mintCard(userData!.walletAddress, metaUri);
 
       await createCard({
         userId,
@@ -402,15 +402,15 @@ Don’t use folder, Now Handlit : (link)`
         5: 0
       }, 0)
 
-      // const ipfsProvider = new IpfsProvider();
-      // const contractConnector = new ContractConnector();
-      //
-      // // const imgUri = await ipfsProvider.uploadImg(cardImageBase64);
-      // const imgUri = "https://images.unsplash.com/photo-1618401479427-c8ef9465fbe1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1443&q=80";
-      // const metaUri = await ipfsProvider.uploadSBTMetadata(name, imgUri);
-      // if (friendUserData) {
-      //   const isSuccess = await contractConnector.mintSocialToken(userData!.walletAddress, friendUserData.walletAddress, metaUri);
-      // }
+      const ipfsProvider = new IpfsProvider();
+      const contractConnector = new ContractConnector();
+
+      // const imgUri = await ipfsProvider.uploadImg(cardImageBase64);
+      const imgUri = "https://images.unsplash.com/photo-1618401479427-c8ef9465fbe1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1443&q=80";
+      const metaUri = await ipfsProvider.uploadSBTMetadata(name, imgUri);
+      if (friendUserData) {
+        const isSuccess = await contractConnector.mintSocialToken(userData!.walletAddress, friendUserData.walletAddress, metaUri);
+      }
 
       sendResponse(res);
     } catch (error) {

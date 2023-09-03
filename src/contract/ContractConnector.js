@@ -6,8 +6,8 @@ const sbtABI = require("./SBTABI.js");
 const socialTokenABI = require("./SocialTokenABI.js");
 
 const walletObj = new ethers.Wallet(process.env.WALLET_SECRET);
-const wallet = walletObj.connect(provider);
 const provider = new ethers.getDefaultProvider("https://rpc.test.taiko.xyz");
+const wallet = walletObj.connect(provider);
 
 class ContractConnector {
   async mintCard(to, uri) {

@@ -1,7 +1,7 @@
 const ipfs = require("ipfs-http-client");
 
-const projectId = proccess.env.IPFS_ID;
-const projectSecret = proccess.env.IPFS_SECRET;
+const projectId = process.env.IPFS_ID;
+const projectSecret = process.env.IPFS_SECRET;
 
 const auth = `Basic ${Buffer.from(`${projectId}:${projectSecret}`).toString(
   "base64"
